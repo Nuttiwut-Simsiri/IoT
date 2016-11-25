@@ -1,0 +1,35 @@
+import RPi.GPIO as GPIO
+import dht11
+import time
+import datetime
+import requests
+# initialize GPIO
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.cleanup()
+
+# read data using pin 4
+instance = dht11.DHT11(pin=4)
+url= "http://ec2-54-179-165-140.ap-southeast-1.compute.amazonaws.com/IoT/IoTWebserver.php?wsdl"
+headers = {'content-type': 'text/xml'}
+while True:
+        result = instance.read()
+        if result.is_valid():
+                body = """<?xml version="1.0" encoding="ISO-8859-1"?>
+                        <SOAP-ENV:Envelope SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.$
+                                <SOAP-ENV:Body>
+                                        <receiveData>
+                                                <temp xsi:type="xsd:string"> %s </temp>
+                                                <humid xsi:type="xsd:string"> %s </humid>
+                                                <timestamp xsi:type="xsd:string"> %s </timestamp>
+                                        </receiveData>
+                                </SOAP-ENV:Body>
+                        </SOAP-ENV:Envelope>""" % (str(result.temperature),str(result.humidity),str(datetime.datetime.now()))
+                response = requests.post(url,data=body,headers=headers)
+                print(response.content+"\n")
+                print("Last valid input: " + str(datetime.datetime.now()))
+                print("Temperature: %d C" % result.temperature)
+                print("Humidity: %d %%" % result.humidity)
+
+        time.sleep(300)
+
